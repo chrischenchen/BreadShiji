@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>市集商品计算器</title>
+    <style>
+        .product {
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        span {
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+    </style>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.5.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.5.0/dist/js/bootstrap.min.js"></script>
+    
+</head>
+<body>
+    <h1 style="text-align: center;">市集商品计算器</h1>
+    <div style="padding-bottom: 20px;">
+        <label for="searchInput">搜索商品：</label>
+        <input type="text" id="searchInput" placeholder="输入商品名称">
+        <button id="searchButton">搜索</button>
+
+        <label for="deleteNameInput" style="padding-left: 30px;">删除商品名称：</label>
+        <input type="text" id="deleteNameInput" placeholder="输入商品名称">
+        <button id="deleteProductByNameButton">确认删除</button>
+    </div>
+
+    <!-- <div>
+
+    </div> -->
+    <div id="productContainer">
+    </div>
+    <div>
+        <p>总价格: <span id="totalPrice">0.00</span>元</p>
+    </div>
+    <button id="resetButton">全部取消</button>
+    <button id="undoButton">撤销上一步</button>
+    <button id="openAddProductDialog">添加商品</button>
+    <!-- Add these elements inside the "body" tag, where you want the delete functionality to appear -->
+
+
+
+    <div id="selectedProducts">
+        <h2>已选中商品</h2>
+        <ul></ul>
+    </div>
+
+    <script>
+        const products = [
+            { name: "青酱盐牛角", price: 13 },
+            { name: "倔强盐牛角", price: 11 },
+            { name: "芝士碱水球", price: 24 },
+            { name: "混合碱水球", price: 18 },
+            { name: "燕麦碱水球", price: 28 },
+            { name: "原味碱水球", price: 26 },
+            { name: "抹茶米面包", price: 16 },
+            { name: "原味米面包", price: 10 },
+            { name: "百香果米面包", price: 15 },
+            { name: "巴斯克布里欧修", price: 16 },
+            { name: "柠檬乳酪布里欧修", price: 10 },
+            { name: "芋泥碱水棒", price: 12 },
+            { name: "香草可露丽", price: 13 },
+            { name: "红茶司康", price: 10 },
+            { name: "法芙娜巧克力可颂", price: 18 },
+            { name: "可颂", price: 13 },
+            { name: "蓝莓塔塔", price: 16 },
+            { name: "香草苹果颂", price: 18 },
+            { name: "蒜香法棍", price: 16 },
+            { name: "德肠长法棍", price: 22 },
+            { name: "卡仕达猫爪", price: 6 },
+            { name: "日式红豆包", price: 6 },
+            { name: "黑芝麻乳酪贝果", price: 16 },
+            { name: "原味贝果", price: 8 },
+            { name: "双椒牛肉芝士夏巴塔", price: 18 },
+            { name: "双椒夏巴塔", price: 9 },
+            { name: "原味夏巴塔", price: 13 },
+            { name: "桂花肉桂卷", price: 13 },
+            { name: "小僵尸", price: 16 }
+        ];
+
+        const productContainer = document.getElementById('productContainer');
+        const totalPriceElement = document.getElementById('totalPrice');
+        const resetButton = document.getElementById('resetButton');
+        const undoButton = document.getElementById('undoButton');
+        const selectedProductsList = document.querySelector('#selectedProducts ul');
+        let totalPrice = 0.00;
+        const selectedProducts = [];
+        let actionHistory = [];
+
+        function updateSelectedProductList() {
+            selectedProductsList.innerHTML = '';
+            selectedProducts.forEach(product => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${product.name} - ${product.price.toFixed(2)}元 x ${product.count}`;
+                listItem.setAttribute('data-name', product.name);
+                selectedProductsList.appendChild(listItem);
+            });
+        }
+
+        function updateTotalPrice() {
+            totalPriceElement.textContent = totalPrice.toFixed(2);
+        }
+
+        products.forEach(product => {
+            const productElement = document.createElement('span');
+            productElement.classList.add('product');
+            productElement.setAttribute('data-price', product.price);
+            productElement.textContent = `${product.name} - ${product.price.toFixed(2)}`;
+
+            productElement.addEventListener('click', () => {
+                const price = parseFloat(productElement.getAttribute('data-price'));
+
+                const selectedProductIndex = selectedProducts.findIndex(p => p.name === product.name);
+                if (selectedProductIndex !== -1) {
+                    selectedProducts[selectedProductIndex].count++;
+                } else {
+                    selectedProducts.push({ name: product.name, price, count: 1 });
+                }
+
+                totalPrice += price;
+                updateTotalPrice();
+                updateSelectedProductList();
+
+                actionHistory.push({ type: 'add', name: product.name });
+            });
+
+            productContainer.appendChild(productElement);
+        });
+
+        resetButton.addEventListener('click', () => {
+            totalPrice = 0.00;
+            updateTotalPrice();
+            selectedProducts.length = 0;
+            updateSelectedProductList();
+            actionHistory.length = 0;
+        });
+
+        undoButton.addEventListener('click', () => {
+            if (actionHistory.length > 0) {
+                const lastAction = actionHistory.pop();
+                const productName = lastAction.name;
+
+                if (lastAction.type === 'add') {
+                    const selectedProductIndex = selectedProducts.findIndex(p => p.name === productName);
+                    if (selectedProductIndex !== -1) {
+                        const selectedProduct = selectedProducts[selectedProductIndex];
+                        selectedProduct.count--;
+                        if (selectedProduct.count === 0) {
+                            selectedProducts.splice(selectedProductIndex, 1);
+                        }
+                        totalPrice -= selectedProduct.price;
+                        updateTotalPrice();
+                        updateSelectedProductList();
+                    }
+                }
+            }
+        });
+
+        const searchInput = document.getElementById('searchInput');
+        const searchButton = document.getElementById('searchButton');
+
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        function performSearch() {
+            const searchQuery = searchInput.value.trim().toLowerCase();
+
+            if (searchQuery === '') {
+                // 如果搜索框为空，显示所有商品
+                productContainer.innerHTML = '';
+                products.forEach(product => {
+                    const productElement = document.createElement('span');
+                    productElement.classList.add('product');
+                    productElement.setAttribute('data-price', product.price);
+                    productElement.textContent = `${product.name} - ${product.price.toFixed(2)}`;
+                    setupProductClickHandler(productElement, product);
+                    productContainer.appendChild(productElement);
+                });
+            } else {
+                // 如果有搜索查询，仅显示匹配的商品
+                productContainer.innerHTML = '';
+                const filteredProducts = products.filter(product => product.name.toLowerCase().includes(searchQuery));
+                filteredProducts.forEach(product => {
+                    const productElement = document.createElement('span');
+                    productElement.classList.add('product');
+                    productElement.setAttribute('data-price', product.price);
+                    productElement.textContent = `${product.name} - ${product.price.toFixed(2)}`;
+                    setupProductClickHandler(productElement, product);
+                    productContainer.appendChild(productElement);
+                });
+            }
+        }
+
+        function setupProductClickHandler(productElement, product) {
+            productElement.addEventListener('click', () => {
+                const price = parseFloat(productElement.getAttribute('data-price'));
+
+                const selectedProductIndex = selectedProducts.findIndex(p => p.name === product.name);
+                if (selectedProductIndex !== -1) {
+                    selectedProducts[selectedProductIndex].count++;
+                } else {
+                    selectedProducts.push({ name: product.name, price, count: 1 });
+                }
+
+                totalPrice += price;
+                updateTotalPrice();
+                updateSelectedProductList();
+
+                actionHistory.push({ type: 'add', name: product.name });
+            });
+        }
+
+        const openAddProductButton = document.getElementById('openAddProductDialog');
+        const addProductDialog = document.createElement('div');
+        addProductDialog.id = 'addProductDialog';
+        addProductDialog.style.display = 'none';
+        addProductDialog.innerHTML = `
+            <h3>添加新商品</h3>
+            <label for="productName">商品名称：</label>
+            <input type="text" id="productName" placeholder="输入商品名称">
+            <br>
+            <label for="productPrice">商品价格：</label>
+            <input type="number" id="productPrice" placeholder="输入商品价格">
+            <br>
+            <button id="addProductToInventory" style="margin-top:20px">确认添加</button>
+            <button id="cancelAddProduct">取消</button>
+        `;
+
+        document.body.appendChild(addProductDialog);
+
+        openAddProductButton.addEventListener('click', () => {
+            addProductDialog.style.display = 'block';
+        });
+
+        const productNameInput = document.getElementById('productName');
+        const productPriceInput = document.getElementById('productPrice');
+        const addProductToInventoryButton = document.getElementById('addProductToInventory');
+        const cancelAddProductButton = document.getElementById('cancelAddProduct');
+
+        addProductToInventoryButton.addEventListener('click', () => {
+            const productName = productNameInput.value.trim();
+            const productPrice = parseFloat(productPriceInput.value);
+
+            if (productName && !isNaN(productPrice) && productPrice > 0) {
+                // 添加新商品到产品列表
+                products.push({ name: productName, price: productPrice });
+
+                // 清空输入框
+                productNameInput.value = '';
+                productPriceInput.value = '';
+
+                // 创建新商品元素并添加到产品容器
+                const productElement = document.createElement('span');
+                productElement.classList.add('product');
+                productElement.setAttribute('data-price', productPrice);
+                productElement.textContent = `${productName} - ${productPrice.toFixed(2)}`;
+                setupProductClickHandler(productElement, { name: productName, price: productPrice });
+                productContainer.appendChild(productElement);
+
+                // 隐藏弹出框
+                addProductDialog.style.display = 'none';
+            } else {
+                alert('请输入有效的商品名称和价格。');
+            }
+        });
+
+        cancelAddProductButton.addEventListener('click', () => {
+            // 清空输入框并隐藏弹出框
+            productNameInput.value = '';
+            productPriceInput.value = '';
+            addProductDialog.style.display = 'none';
+        });
+
+  // Add this code to the existing JavaScript section below the other event listeners
+
+const deleteNameInput = document.getElementById('deleteNameInput');
+const deleteProductByNameButton = document.getElementById('deleteProductByNameButton');
+
+deleteProductByNameButton.addEventListener('click', () => {
+    const productNameToDelete = deleteNameInput.value.trim();
+
+    if (productNameToDelete) {
+        const productIndex = products.findIndex(product => product.name === productNameToDelete);
+
+        if (productIndex !== -1) {
+            const deletedProduct = products.splice(productIndex, 1)[0];
+            // Update the UI to remove the deleted product
+            const productElements = document.querySelectorAll('.product');
+            if (productElements[productIndex]) {
+                productContainer.removeChild(productElements[productIndex]);
+            }
+            // Update total price
+            // totalPrice -= deletedProduct.price;
+            // updateTotalPrice();
+            // Update selected products list
+            const selectedProductIndex = selectedProducts.findIndex(p => p.name === deletedProduct.name);
+            if (selectedProductIndex !== -1) {
+                const selectedProduct = selectedProducts[selectedProductIndex];
+                if (selectedProduct.count > 1) {
+                    selectedProduct.count--;
+                } else {
+                    selectedProducts.splice(selectedProductIndex, 1);
+                }
+                updateSelectedProductList();
+            }
+            // Clear the delete input field
+            deleteNameInput.value = '';
+            // Update action history
+            actionHistory.push({ type: 'delete', name: deletedProduct.name });
+        } else {
+            alert('找不到该商品，请输入有效的商品名称。');
+        }
+    } else {
+        alert('请输入商品名称以删除商品。');
+    }
+});
+
+
+
+    </script>
+</body>
+</html>
